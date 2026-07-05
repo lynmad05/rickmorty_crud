@@ -1,97 +1,128 @@
-# Rick and Morty CRUD
+# Rick and Morty CRUD - Aplicacion Flutter
 
-Aplicacion Flutter que consume la API publica de Rick and Morty y permite
-gestionar un CRUD completo (crear, leer, actualizar, eliminar) sobre los
-personajes, persistiendo los cambios en una base de datos local SQLite.
+## Integrantes
 
-## Como funciona
+- Medina Mallqui, Ailyn
+- Ochoa Marin, Yamile
 
-1. En el primer arranque, la app descarga personajes desde
-   `https://rickandmortyapi.com/api/character` y los guarda en SQLite.
-2. Toda la gestion posterior (crear, editar, eliminar) se hace sobre esa base
-   local, que es la fuente de verdad de la app.
-3. Deslizando hacia abajo en la pantalla principal (pull to refresh) se
-   sincronizan personajes nuevos desde la API sin duplicar los existentes.
+## Descripcion general
+
+Aplicacion movil desarrollada en Flutter que consume la API publica de Rick
+and Morty y permite gestionar un CRUD completo (crear, leer, actualizar y
+eliminar) sobre los personajes obtenidos. La informacion se persiste de
+forma local mediante una base de datos SQLite, lo que permite que la
+aplicacion funcione de manera consistente incluso si la conexion a internet
+se pierde despues de la carga inicial.
+
+## API consumida
+
+- **Nombre:** Rick and Morty API
+- **Endpoint base:** `https://rickandmortyapi.com/api/character`
+- **Tipo:** API publica REST, de solo lectura (unicamente expone metodos GET)
+- **Uso dentro de la aplicacion:** al iniciar la aplicacion por primera vez,
+  se realiza una peticion HTTP GET para obtener personajes reales (nombre,
+  estado, especie, genero, origen e imagen). Esta informacion se utiliza
+  para poblar la base de datos local, que es la que finalmente respalda
+  todas las operaciones del CRUD.
+
+
+## Patron de arquitectura
+
+El proyecto sigue una separacion por capas inspirada en el patron
+**MVVM / Provider Pattern**
+
+- **Model:** clases que representan las entidades del dominio
+  (`models/character_model.dart`).
+- **Service:** capa encargada de la comunicacion con fuentes de datos
+  externas e internas: la API remota (`services/api_service.dart`) y la
+  base de datos local (`services/database_service.dart`).
+- **Provider (ViewModel):** clase `CharacterProvider`, que extiende
+  `ChangeNotifier` y concentra el estado y la logica de negocio de la
+  aplicacion (busqueda, filtros, operaciones CRUD), notificando a la
+  interfaz cuando el estado cambia.
+- **View:** pantallas (`screens/`) y widgets reutilizables (`widgets/`),
+  que solo se encargan de la presentacion y reaccionan a los cambios de
+  estado del Provider mediante `Consumer` y `context.read` / `context.watch`.
+
+
+## Tecnologias y paquetes utilizados
+
+| Paquete | Uso |
+|---|---|
+| `http` | Consumo de la API REST de Rick and Morty |
+| `provider` | Gestion de estado con el patron Provider |
+| `sqflite` | Persistencia local de datos (CRUD) |
+| `path` / `path_provider` | Manejo de rutas para la base de datos local |
+| `cached_network_image` | Carga y cacheo de imagenes remotas |
+| `google_fonts` | Tipografia personalizada (Poppins y Playfair Display) |
 
 ## Estructura del proyecto
 
 ```
 lib/
   core/
-    constants/api_constants.dart
-    theme/app_colors.dart
-    theme/app_theme.dart
+    constants/
+      api_constants.dart        Constantes de endpoints de la API
+    theme/
+      app_colors.dart           Paleta de colores de la aplicacion
+      app_theme.dart            Tema global (tipografia, botones, inputs)
   models/
-    character_model.dart
+    character_model.dart        Entidad Character (mapeo API y SQLite)
   services/
-    api_service.dart
-    database_service.dart
+    api_service.dart            Consumo de la API de Rick and Morty
+    database_service.dart       Operaciones CRUD sobre SQLite
   providers/
-    character_provider.dart
+    character_provider.dart     Estado global y logica de negocio (CRUD)
   screens/
-    home_screen.dart
-    character_detail_screen.dart
-    character_form_screen.dart
+    home_screen.dart            Listado, busqueda y filtros de personajes
+    character_detail_screen.dart Detalle de un personaje
+    character_form_screen.dart  Formulario de creacion y edicion
   widgets/
-    character_card.dart
-    status_badge.dart
-    empty_state.dart
-    custom_text_field.dart
-  main.dart
+    character_card.dart         Tarjeta de personaje en la grilla
+    status_badge.dart           Indicador visual de estado (vivo/muerto)
+    empty_state.dart            Estado vacio y manejo visual de errores
+    custom_text_field.dart      Campo de texto reutilizable para formularios
+  main.dart                     Punto de entrada de la aplicacion
 ```
 
-## Paso a paso para correrlo
+## Funcionalidades CRUD
 
-1. Instala las dependencias:
+- **Create:** formulario para registrar un nuevo personaje con nombre,
+  especie, estado, genero, origen e imagen.
+- **Read:** listado de personajes en formato de grilla, con busqueda por
+  nombre y filtro por estado (vivo, muerto, desconocido).
+- **Update:** edicion de cualquier campo de un personaje existente desde su
+  pantalla de detalle.
+- **Delete:** eliminacion de un personaje con dialogo de confirmacion
+  previo.
+- **Sincronizacion:** accion de "pull to refresh" en la pantalla principal
+  para obtener personajes adicionales desde la API sin duplicar los que ya
+  existen en la base de datos local.
 
-```
-flutter pub get
-```
+## Instalacion y ejecucion
 
-2. Si el proyecto no trae las carpetas nativas (android, ios, etc.), genera
-   las plataformas sin tocar lib/ ni pubspec.yaml:
+1. Instalar las dependencias del proyecto:
 
-```
-flutter create .
-```
+   ```
+   flutter pub get
+   ```
 
-3. Conecta un emulador o celular y corre:
+2. Si el proyecto no incluye las carpetas nativas (android, ios), generarlas
+   sin sobrescribir el codigo existente:
 
-```
-flutter run
-```
+   ```
+   flutter create .
+   ```
 
-## Si no aparece ningun personaje
-
-Casi siempre es uno de estos dos motivos:
-
-1. **Falta el permiso de internet en Android.** Cuando generas las carpetas
-   nativas con `flutter create .`, el `AndroidManifest.xml` que se crea NO
-   incluye el permiso de internet por defecto. Abre
-   `android/app/src/main/AndroidManifest.xml` y agrega esta linea dentro de
-   la etiqueta `<manifest ...>`, antes de `<application ...>`:
+3. Verificar que el `AndroidManifest.xml` (`android/app/src/main/AndroidManifest.xml`)
+   incluya el permiso de internet:
 
    ```xml
    <uses-permission android:name="android.permission.INTERNET" />
    ```
 
-   Sin esa linea, las peticiones a la API fallan en silencio (excepcion de
-   socket) y la app se queda sin datos.
+4. Conectar un emulador o dispositivo fisico y ejecutar:
 
-2. **El emulador no tiene internet.** Prueba abrir un navegador dentro del
-   emulador o corre `flutter run` y revisa la consola: si ves un error de
-   `SocketException` o `ClientException`, es un tema de red del emulador, no
-   del codigo.
-
-Si el problema persiste, ahora la pantalla principal muestra el mensaje de
-error real (con boton "Reintentar") en vez de un simple "no hay personajes",
-para que sea mas facil detectar la causa.
-
-## Notas tecnicas
-
-- Gestion de estado con `provider`.
-- Persistencia local con `sqflite`.
-- Imagenes remotas cacheadas con `cached_network_image`.
-- Tipografia con `google_fonts` (Poppins).
-- Paleta de color monocromatica en tonos vino/borgoña, definida en
-  `lib/core/theme/app_colors.dart`.
+   ```
+   flutter run
+   ```
